@@ -68,6 +68,171 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .drawer-open #sky .lift { opacity: 0.32; }
 .night.drawer-open #sky .lift { opacity: 0.42; }
 
+/* MARK: - Weather scene (home.js applyWeatherScene): the sky's colour for the weather, day or night, and only what that
+ * weather has in it, always moving, always slowly: clouds sail across in three layers (far ones slower), rain and snow
+ * fall (snow sways), fog rolls, stars twinkle and now and then one shoots; the sun and moon glow softly; storms flash.
+ * Only transform and opacity animate, and a part only gets its animation-name when the scene shows it. */
+#wx { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; opacity: 0; -webkit-transition: opacity 2s; transition: opacity 2s; }
+#sky.wx-on #wx { opacity: 1; }
+#sky.wx-on .veil { background: rgba(245, 245, 247, 0.12); }
+.night #sky.wx-on .veil { background: rgba(0, 0, 0, 0.12); }
+#wx > div { position: absolute; opacity: 0; -webkit-transition: opacity 2.5s ease; transition: opacity 2.5s ease; }
+
+/* Skies: top to horizon, as in the iPhone's Weather */
+#wx.wx-day.k-clear    { background: linear-gradient(#1C5FC4, #3F86DA 45%, #8CC0EE); }
+#wx.wx-day.k-partly   { background: linear-gradient(#2A63B4, #4C86CC 45%, #94BBE2); }
+#wx.wx-day.k-cloudy   { background: linear-gradient(#5E6E80, #7D8C9C 50%, #A3AFBB); }
+#wx.wx-day.k-fog      { background: linear-gradient(#8A949E, #A5ADB5 50%, #C3C8CD); }
+#wx.wx-day.k-rain     { background: linear-gradient(#45525F, #5D6B79 50%, #7C8995); }
+#wx.wx-day.k-snow     { background: linear-gradient(#7F8FA3, #A2B0C0 50%, #CBD4DE); }
+#wx.wx-day.k-storm    { background: linear-gradient(#2A323C, #3E4752 50%, #56606B); }
+#wx.wx-night.k-clear  { background: linear-gradient(#040814, #0B1530 50%, #1B2A50); }
+#wx.wx-night.k-partly { background: linear-gradient(#070C1A, #111C36 50%, #22304F); }
+#wx.wx-night.k-cloudy { background: linear-gradient(#11151C, #1C222C 50%, #2A313C); }
+#wx.wx-night.k-fog    { background: linear-gradient(#171A1F, #23272E 50%, #343941); }
+#wx.wx-night.k-rain   { background: linear-gradient(#0C1016, #161C25 50%, #222A35); }
+#wx.wx-night.k-snow   { background: linear-gradient(#141A26, #222B3B 50%, #343F52); }
+#wx.wx-night.k-storm  { background: linear-gradient(#07090C, #11151B 50%, #1C2128); }
+
+/* The photo of the sky (home.js setPhoto): 2304 × 1296, shown a little larger than the screen so it can drift and
+ * zoom very slowly for a minute and back; two layers crossfade when the weather changes. */
+#wx .photo { left: -192px; top: -108px; width: 2304px; height: 1296px; background-size: 2304px 1296px; background-position: center;
+  -webkit-transition: opacity 3s ease; transition: opacity 3s ease;
+  -webkit-animation: wx-pan 40s ease-in-out infinite alternate; animation: wx-pan 40s ease-in-out infinite alternate; }
+#wx .photo.pb { -webkit-animation-delay: -20s; animation-delay: -20s; }
+#wx .photo.on { opacity: 1; }
+/* Shown pixel for pixel (2304 × 1296, 192 px spare each side): a slow glide across and a gentle zoom, so the sky is
+ * always visibly moving (about 6 px a second), never fast. */
+@-webkit-keyframes wx-pan { from { -webkit-transform: translate(-150px, -40px) scale(1); } to { -webkit-transform: translate(150px, 40px) scale(1.1); } }
+@keyframes wx-pan { from { transform: translate(-150px, -40px) scale(1); } to { transform: translate(150px, 40px) scale(1.1); } }
+
+/* Sun: a warm, soft glow in the top right that breathes */
+#wx .sun { left: 1180px; top: -560px; width: 1300px; height: 1300px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 244, 214, 0.95) 0, rgba(255, 226, 160, 0.5) 9%, rgba(255, 210, 140, 0.16) 30%, rgba(255, 210, 140, 0) 58%);
+  -webkit-animation: 7s ease-in-out infinite alternate; animation: 7s ease-in-out infinite alternate; }
+#wx.wx-day.k-clear .sun { opacity: 1; -webkit-animation-name: wx-breathe; animation-name: wx-breathe; }
+#wx.wx-day.k-partly .sun { opacity: 0.7; -webkit-animation-name: wx-breathe; animation-name: wx-breathe; }
+
+/* Moon: a small, softly glowing disc high up, between the clock and the weather */
+#wx .moon { left: 1080px; top: 96px; width: 84px; height: 84px; border-radius: 50%;
+  background: radial-gradient(circle at 42% 40%, #F7F8FB 0, #E3E7EF 55%, #C9CFDB 100%);
+  box-shadow: 0 0 40px 10px rgba(205, 218, 255, 0.22), 0 0 140px 50px rgba(150, 175, 255, 0.08);
+  -webkit-animation: 10s ease-in-out infinite alternate; animation: 10s ease-in-out infinite alternate; }
+#wx.wx-night.k-clear .moon { opacity: 1; -webkit-animation-name: wx-glow; animation-name: wx-glow; }
+#wx.wx-night.k-partly .moon { opacity: 0.85; -webkit-animation-name: wx-glow; animation-name: wx-glow; }
+
+/* Stars: three layers that twinkle out of step; fainter where clouds are */
+#wx .st1, #wx .st2, #wx .st3 { left: 0; top: 0; width: 1px; height: 1px; border-radius: 50%; background: transparent; }
+#wx .st1 { -webkit-animation: 7s ease-in-out infinite alternate; animation: 7s ease-in-out infinite alternate; }
+#wx .st2 { -webkit-animation: 4.5s ease-in-out infinite alternate-reverse; animation: 4.5s ease-in-out infinite alternate-reverse; }
+#wx .st3 { -webkit-animation: 3s ease-in-out -1.5s infinite alternate; animation: 3s ease-in-out -1.5s infinite alternate; }
+/* Over the photo's own stars, a few that twinkle bring the clear night to life */
+#wx.wx-night.k-clear .st2, #wx.wx-night.k-clear .st3 { opacity: 1; -webkit-animation-name: wx-twinkle-strong; animation-name: wx-twinkle-strong; }
+@-webkit-keyframes wx-twinkle-strong { 0% { opacity: 0.1; } 50% { opacity: 1; } 100% { opacity: 0.25; } }
+@keyframes wx-twinkle-strong { 0% { opacity: 0.1; } 50% { opacity: 1; } 100% { opacity: 0.25; } }
+
+/* A shooting star now and then (clear and partly cloudy nights) */
+/* Big and obvious: a 520 px glowing trail with a bright head, crossing a third of the sky in about a second. */
+#wx .shoot { left: 1560px; top: 70px; width: 520px; height: 6px; border-radius: 6px;
+  background: linear-gradient(90deg, #FFF 0, rgba(235, 242, 255, 0.95) 6%, rgba(190, 210, 255, 0.55) 35%, rgba(190, 210, 255, 0) 100%);
+  box-shadow: 0 0 22px 6px rgba(200, 220, 255, 0.55), -6px 0 30px 10px rgba(255, 255, 255, 0.35);
+  -webkit-transform-origin: 0 50%; transform-origin: 0 50%;
+  -webkit-animation: 10s linear 3s infinite; animation: 10s linear 3s infinite; }
+#wx.wx-night.k-clear .shoot, #wx.wx-night.k-partly .shoot { -webkit-animation-name: wx-shoot; animation-name: wx-shoot; }
+
+/* Clouds: three seamless bands that sail right to left, the far one slowest and faintest */
+#wx .clouds { left: 0; top: -20px; width: 3840px; height: 760px; background-repeat: repeat-x; background-size: 1920px 760px;
+  -webkit-animation: linear infinite; animation: linear infinite; }
+#wx .cl1 { top: -60px; -webkit-animation-duration: 420s; animation-duration: 420s; }
+#wx .cl2 { top: 20px; -webkit-animation-duration: 260s; animation-duration: 260s; }
+#wx .cl3 { top: 120px; -webkit-animation-duration: 170s; animation-duration: 170s; }
+#wx.k-partly .cl1 { opacity: 0.5; } #wx.k-partly .cl2 { opacity: 0.8; } #wx.k-partly .cl3 { opacity: 0.95; }
+#wx.k-cloudy .clouds, #wx.k-rain .clouds, #wx.k-snow .clouds, #wx.k-storm .clouds { opacity: 0.8; }
+#wx.k-cloudy .cl1, #wx.k-rain .cl1, #wx.k-snow .cl1, #wx.k-storm .cl1 { opacity: 0.6; }
+#wx.wx-night.k-partly .clouds, #wx.wx-night.k-cloudy .clouds, #wx.wx-night.k-rain .clouds, #wx.wx-night.k-snow .clouds,
+#wx.wx-night.k-storm .clouds { opacity: 0.7; }
+#wx.k-partly .clouds, #wx.k-cloudy .clouds, #wx.k-rain .clouds, #wx.k-snow .clouds, #wx.k-storm .clouds {
+  -webkit-animation-name: wx-sail; animation-name: wx-sail; }
+
+/* Fog: two soft bands rolling past each other low down, and a haze over everything */
+#wx .fog { left: 0; width: 3840px; height: 520px; background-repeat: repeat-x; background-size: 1920px 520px;
+  -webkit-animation: linear infinite; animation: linear infinite; }
+#wx .f1 { top: 330px; -webkit-animation-duration: 160s; animation-duration: 160s; }
+#wx .f2 { top: 560px; -webkit-animation-duration: 110s; animation-duration: 110s; -webkit-animation-direction: reverse; animation-direction: reverse; }
+#wx .haze { left: 0; top: 0; width: 100%; height: 100%; background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.35) 70%, rgba(255, 255, 255, 0.45)); }
+#wx.k-fog .fog { opacity: 1; -webkit-animation-name: wx-sail; animation-name: wx-sail; }
+#wx.k-fog .haze { opacity: 1; }
+#wx.wx-night.k-fog .fog { opacity: 0.32; }
+/* Cloudy skies: low wisps drift across the photo, so overcast moves too */
+#wx.k-cloudy .fog { opacity: 0.4; -webkit-animation-name: wx-sail; animation-name: wx-sail; }
+#wx.k-cloudy .f1 { top: 120px; }
+#wx.wx-night.k-cloudy .fog { opacity: 0.2; }
+/* Partly cloudy nights: thin wisps drift past the moon */
+#wx.wx-night.k-partly .fog { opacity: 0.22; -webkit-animation-name: wx-sail; animation-name: wx-sail; }
+#wx.wx-night.k-partly .f1 { top: 40px; }
+#wx.wx-night.k-fog .haze { opacity: 0.25; }
+
+/* Rain: thin streaks falling in two layers at different speeds; drizzle is one faint layer, a downpour both, strong */
+#wx .rain { left: 0; top: -512px; width: 1920px; height: 1592px; background-repeat: repeat; background-size: 512px 512px;
+  -webkit-animation: linear infinite; animation: linear infinite; }
+#wx .p1 { -webkit-animation-duration: 0.95s; animation-duration: 0.95s; }
+#wx .p2 { -webkit-animation-duration: 1.5s; animation-duration: 1.5s; background-size: 384px 384px; }
+#wx.k-rain .p1, #wx.k-storm .p1 { opacity: 0.6; -webkit-animation-name: wx-fall; animation-name: wx-fall; }
+#wx.k-rain .p2, #wx.k-storm .p2 { opacity: 0.35; -webkit-animation-name: wx-fall-far; animation-name: wx-fall-far; }
+#wx.k-rain.wx-light .p1 { opacity: 0; -webkit-animation-name: none; animation-name: none; }
+#wx.k-rain.wx-light .p2 { opacity: 0.4; }
+#wx.wx-heavy .p1, #wx.k-storm .p1 { opacity: 0.85; }
+#wx.wx-heavy .p2, #wx.k-storm .p2 { opacity: 0.55; }
+
+/* Snow: soft flakes drifting down in two layers, swaying gently from side to side */
+#wx .snowsway { left: -60px; top: 0; width: 2040px; height: 100%; -webkit-animation: 7s ease-in-out infinite alternate; animation: 7s ease-in-out infinite alternate; }
+#wx .snowsway.b { -webkit-animation-duration: 11s; animation-duration: 11s; -webkit-animation-direction: alternate-reverse; animation-direction: alternate-reverse; }
+#wx .snowsway > div { position: absolute; left: 0; top: -512px; width: 2040px; height: 1592px; background-repeat: repeat; background-size: 512px 512px;
+  -webkit-animation: linear infinite; animation: linear infinite; }
+#wx .s1f { -webkit-animation-duration: 16s; animation-duration: 16s; }
+#wx .s2f { -webkit-animation-duration: 26s; animation-duration: 26s; background-size: 360px 360px; opacity: 0.7; }
+#wx.k-snow .snowsway { opacity: 1; -webkit-animation-name: wx-sway; animation-name: wx-sway; }
+#wx.k-snow .snowsway > div { -webkit-animation-name: wx-fall; animation-name: wx-fall; }
+#wx.k-snow .snowsway.b > div { -webkit-animation-name: wx-fall-far; animation-name: wx-fall-far; }
+#wx.k-snow.wx-light .snowsway.a { opacity: 0; }
+#wx.k-snow.wx-light .snowsway.a > div { -webkit-animation-name: none; animation-name: none; }
+
+/* Lightning: a soft glow from above, a double flicker now and then */
+#wx .flash { left: 0; top: 0; width: 100%; height: 100%; -webkit-transition: none; transition: none;
+  background: radial-gradient(1400px 700px at 60% 0%, rgba(220, 230, 255, 0.9), rgba(220, 230, 255, 0) 70%); }
+#wx.k-storm .flash { -webkit-animation: wx-flash 9s linear 2s infinite; animation: wx-flash 9s linear 2s infinite; }
+
+/* Grain over everything: no colour bands on a big screen */
+#wx .grain { left: 0; top: 0; width: 100%; height: 100%; opacity: 1; background-repeat: repeat; background-size: 192px 192px; }
+
+@-webkit-keyframes wx-breathe { from { -webkit-transform: scale(0.88); opacity: 0.65; } to { -webkit-transform: scale(1.1); opacity: 1; } }
+@keyframes wx-breathe { from { transform: scale(0.88); opacity: 0.65; } to { transform: scale(1.1); opacity: 1; } }
+@-webkit-keyframes wx-glow { from { opacity: 0.85; } to { opacity: 1; } }
+@keyframes wx-glow { from { opacity: 0.85; } to { opacity: 1; } }
+@-webkit-keyframes wx-twinkle { from { opacity: 0.35; } to { opacity: 1; } }
+@keyframes wx-twinkle { from { opacity: 0.35; } to { opacity: 1; } }
+/* Bands are two widths of the same 1920 px picture: sliding one width loops without a seam. */
+@-webkit-keyframes wx-sail { from { -webkit-transform: translateX(0); } to { -webkit-transform: translateX(-1920px); } }
+@keyframes wx-sail { from { transform: translateX(0); } to { transform: translateX(-1920px); } }
+@-webkit-keyframes wx-fall { from { -webkit-transform: translateY(0); } to { -webkit-transform: translateY(512px); } }
+@keyframes wx-fall { from { transform: translateY(0); } to { transform: translateY(512px); } }
+@-webkit-keyframes wx-fall-far { from { -webkit-transform: translateY(0); } to { -webkit-transform: translateY(384px); } }
+@keyframes wx-fall-far { from { transform: translateY(0); } to { transform: translateY(384px); } }
+@-webkit-keyframes wx-sway { from { -webkit-transform: translateX(-28px); } to { -webkit-transform: translateX(28px); } }
+@keyframes wx-sway { from { transform: translateX(-28px); } to { transform: translateX(28px); } }
+@-webkit-keyframes wx-shoot {
+  0%, 86% { opacity: 0; -webkit-transform: translate(0, 0) rotate(-24deg) scaleX(0.4); }
+  88% { opacity: 1; -webkit-transform: translate(-160px, 72px) rotate(-24deg) scaleX(1); }
+  95% { opacity: 0.9; -webkit-transform: translate(-900px, 400px) rotate(-24deg) scaleX(1); }
+  98%, 100% { opacity: 0; -webkit-transform: translate(-1060px, 472px) rotate(-24deg) scaleX(0.6); } }
+@keyframes wx-shoot {
+  0%, 86% { opacity: 0; transform: translate(0, 0) rotate(-24deg) scaleX(0.4); }
+  88% { opacity: 1; transform: translate(-160px, 72px) rotate(-24deg) scaleX(1); }
+  95% { opacity: 0.9; transform: translate(-900px, 400px) rotate(-24deg) scaleX(1); }
+  98%, 100% { opacity: 0; transform: translate(-1060px, 472px) rotate(-24deg) scaleX(0.6); } }
+@-webkit-keyframes wx-flash { 0%, 70% { opacity: 0; } 71% { opacity: 0.75; } 72.5% { opacity: 0.12; } 74% { opacity: 0.6; } 78%, 100% { opacity: 0; } }
+@keyframes wx-flash { 0%, 70% { opacity: 0; } 71% { opacity: 0.75; } 72.5% { opacity: 0.12; } 74% { opacity: 0.6; } 78%, 100% { opacity: 0; } }
+
 /* MARK: - Moving parts: the top fades and everything rises when the drawer opens. */
 
 /* Each part is its own stack, so a focused tile (z-index) never shows over the drawer, a sheet or the screensaver. */
@@ -315,6 +480,32 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .night #clock { color: #F5F5F7; }
 .night #clock .date { color: rgba(245, 245, 247, 0.62); }
 
+/* The greeting above the clock (when the clock shows: no picks). */
+#greet { position: absolute; left: 80px; top: 204px; font-size: 64px; font-weight: 700; letter-spacing: -0.015em; color: #1D1D1F; white-space: nowrap; display: none; }
+.no-picks #greet { display: block; }
+.night #greet { color: #FFF; }
+
+/* Over a weather sky the type gets weight and a soft shadow, so it stands out on any background. */
+#sky.wx-on ~ #home #clock { font-size: 208px; font-weight: 500; letter-spacing: -0.03em; top: 294px; }
+#sky.wx-on ~ #home #clock .date { font-size: 45px; font-weight: 600; margin-top: 14px; letter-spacing: -0.005em; }
+.night #sky.wx-on ~ #home #clock { color: #FFF; }
+.night #sky.wx-on ~ #home #clock .date { color: rgba(255, 255, 255, 0.88); }
+.night #sky.wx-on ~ #home #greet, .night #sky.wx-on ~ #home #clock, .night #sky.wx-on ~ #home #nowwx {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.35), 0 6px 28px rgba(0, 0, 0, 0.45); }
+/* The weather now, opposite the clock (when the clock shows: no picks). */
+#nowwx { position: absolute; right: 80px; top: 318px; text-align: right; color: #1D1D1F; display: none; }
+.no-picks #nowwx.on { display: block; }
+#nowwx .now { font-size: 146px; font-weight: 500; letter-spacing: -0.03em; line-height: 1; white-space: nowrap; }
+#nowwx .now .sym { width: 124px; height: 124px; margin-right: 24px; vertical-align: -9px; }
+#nowwx .cond { font-size: 47px; font-weight: 700; letter-spacing: -0.01em; margin-top: 20px; color: #1D1D1F; white-space: nowrap; }
+#nowwx .range { font-size: 39px; font-weight: 600; margin-top: 12px; color: #3A3A3C; white-space: pre; }
+#nowwx .sun { font-size: 37px; font-weight: 600; margin-top: 16px; color: #3A3A3C; white-space: nowrap; }
+#nowwx .sun span { margin-left: 34px; }
+#nowwx .sun .sym { width: 41px; height: 41px; margin-right: 10px; vertical-align: -7px; }
+.night #nowwx { color: #FFF; }
+.night #nowwx .cond { color: #FFF; }
+.night #nowwx .range, .night #nowwx .sun { color: rgba(255, 255, 255, 0.88); }
+
 /* MARK: - Shelf: the glass bar with the apps, each in its brand color; focused, a tile grows 20% and rises. */
 
 #platter {
@@ -352,6 +543,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.2), box-shadow 0.2s, opacity 0.3s;
 }
 .tile img { position: absolute; left: 50%; top: 50%; max-width: 76%; max-height: 62%; -webkit-transform: translate(-50%, -50%); transform: translate(-50%, -50%); }
+.tile img.own { max-width: 46%; max-height: 54%; }
 /* a logo lifted off the TV's icon (home.js): as large as the tile allows */
 .tile img.logo { width: 70%; height: 50%; max-width: none; max-height: none; object-fit: contain; }
 .tile .word {
@@ -387,6 +579,25 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .tile.focus::after { opacity: 1; }
 .night .tile { box-shadow: 0 4px 22px rgba(0, 0, 0, 0.3); }
 .night .tile.focus { box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6); }
+
+/* The selected app on the shelf can't be missed: much bigger, lifted, a white ring and a glow; the others step back. */
+/* Only transform and opacity change, with one soft curve, so the GPU animates it all smoothly; the ring and glow are
+ * #halo's, gliding behind (home.js moveHalo), not shadows switching tile to tile. */
+#tiles .tile.focus {
+  -webkit-transform: translateY(-16px) scale(1.34); transform: translateY(-16px) scale(1.34);
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.3);
+  opacity: 1;
+}
+#tiles .tile { -webkit-transition: -webkit-transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.34s ease;
+  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.34s ease; }
+#tiles:has(.tile.focus) .tile:not(.focus) { opacity: 0.55; }
+#tiles { -webkit-transition: -webkit-transform 0.34s cubic-bezier(0.22, 1, 0.36, 1); transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+#halo { position: absolute; border-radius: 22px; opacity: 0; pointer-events: none;
+  box-shadow: 0 0 0 3px #FFF, 0 0 30px 6px rgba(255, 255, 255, 0.4), 0 20px 40px rgba(0, 0, 0, 0.5);
+  -webkit-transition: -webkit-transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+  will-change: transform; }
+#halo.on { opacity: 1; }
 .more { position: absolute; width: 17px; height: 17px; color: rgba(0, 0, 0, 0.6); }
 .more.back { -webkit-transform: scaleX(-1); transform: scaleX(-1); }
 .night .more { color: rgba(255, 255, 255, 0.8); }

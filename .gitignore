@@ -17,3 +17,9 @@ __pycache__/
 # macOS
 .DS_Store
 tools/.i18n-cache.json
+
+# This machine's own: the TV's address and the helpers' logs
+webos/tv-ip.txt
+webos/renew.log
+tools/autostart.log
+tools/autostart.log.old

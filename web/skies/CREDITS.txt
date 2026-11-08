@@ -1,0 +1,12 @@
+Sky photos for the weather backgrounds, from Pexels (https://www.pexels.com), under the Pexels License:
+free to use and modify, no attribution required (https://www.pexels.com/license/).
+Downloaded 2026-11-08 at 2304 x 1296 (a little above full HD, so they can drift slowly).
+
+clear-day.jpg     Blue Sky                        https://www.pexels.com/photo/281260/
+partly-day.jpg    White fluffy clouds, blue sky   https://www.pexels.com/photo/15875761/
+overcast.jpg      Grey overcast sky               https://www.pexels.com/photo/12363151/   also rain and snow days
+storm.jpg         Dark dramatic sky with clouds   https://www.pexels.com/photo/17785314/   day and night
+fog.jpg           Hazy grey sky                   https://www.pexels.com/photo/5107086/    day and night
+clear-night.jpg   Milky Way and stars             https://www.pexels.com/photo/1257860/
+moon-night.jpg    Full moon in a cloudy sky       https://www.pexels.com/photo/13592310/   partly cloudy nights
+cloudy-night.jpg  Dark clouds at night            https://www.pexels.com/photo/790181/     also rain and snow nights

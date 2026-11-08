@@ -62,6 +62,8 @@ var Prefs = (function () {
   var v = {};
   try { v = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
   function save() { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} }
+  // Once: the screensaver picked before 'off' existed goes back to the new default, off (the TV's own then runs).
+  if (v.saverReset !== 1) { delete v.saver; v.saverReset = 1; save(); }
   function pick(name, fallback) { return v[name] === undefined ? fallback : v[name]; }
   return {
     version: 0,
@@ -71,8 +73,11 @@ var Prefs = (function () {
     weather: function () { return pick('weather', true); },
     /** OK on the screensaver opens the title it shows, in its app; any other key only closes it (off by default). */
     saverWatch: function () { return pick('saverWatch', false) === true; },
-    /** What the screensaver shows: 'photos' (the picks' photos, as it always has) or 'clock' (a clock and the weather). */
-    saver: function () { return pick('saver', 'photos') === 'clock' ? 'clock' : 'photos'; },
+    /**
+     * Free My TV's own screensaver: 'off' (the default: none, so the TV's own screensaver comes on at its usual time),
+     * 'photos' (the picks' photos) or 'clock' (a clock and the weather).
+     */
+    saver: function () { var s = pick('saver', 'off'); return s === 'clock' || s === 'photos' ? s : 'off'; },
     /** Dimming over the picture, for a dark room: 'off', 'low', 'medium', 'high' or 'auto' (medium at night). */
     dim: function () { return pick('dim', 'off'); },
     /** The weather card's forecast: 'hours' (the next 6 hours) or 'days' (the next 5 days). */
@@ -168,10 +173,13 @@ var Data = (function () {
   // Both forecasts in one answer, the next 48 hours and today plus 5 days: Home Settings → Forecast switches without
   // asking again, and offline too. 14 steps of 15 minutes tell the card whether rain comes in the next two hours, even
   // from a forecast 30 minutes old (where the time zone is off by half an hour, they start up to 45 minutes back).
-  var QUERY = '&current=temperature_2m,weather_code,is_day'
+  var QUERY = '&current=temperature_2m,weather_code,is_day,wind_speed_10m,wind_gusts_10m'
       + '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,weather_code,uv_index_max'
       + '&minutely_15=precipitation,precipitation_probability&forecast_minutely_15=14'
-      + '&hourly=temperature_2m,weather_code,is_day&timezone=auto&forecast_days=6&forecast_hours=48';
+      + '&hourly=temperature_2m,weather_code,is_day&timezone=auto&forecast_days=6&forecast_hours=48'
+      // DWD's ICON (2 km over Central Europe): in testing it matched a phone's weather app (-1°, clear) when Open-Meteo's
+      // default blend said 2° and overcast. A changed query is fetched again at once (the cache keeps the query).
+      + '&models=icon_seamless';
   var weather = null, weatherAt = 0, fetchingWeather = false;
   (function () {
     var w = stored('weather');
@@ -191,6 +199,7 @@ var Data = (function () {
     var off = o.utc_offset_seconds || 0, dl = o.daily, now = Date.now();
     var w = {
       temp: o.current.temperature_2m, code: o.current.weather_code, isDay: o.current.is_day !== 0,
+      wind: o.current.wind_speed_10m, gust: o.current.wind_gusts_10m,   // km/h (the weather scene)
       max: dl.temperature_2m_max[0], min: dl.temperature_2m_min[0],
       uv: dl.uv_index_max ? dl.uv_index_max[0] : null,
       sunrise: localTime(dl.sunrise[0], off), sunset: localTime(dl.sunset[0], off), hours: [], days: []

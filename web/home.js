@@ -84,9 +84,13 @@
     ['jellyfin', /jellyfin/i, /jellyfin/i, ['#AA5CC3', '#00A4DC']],
     ['spotify', /spotify/, /spotify/i, ['#1DB954', '#0F7A36']]
   ];
-  // Apps shown at once, as on Android: 8 (today's smallest tiles, 178 wide); the shelf scrolls for the rest. The
-  // built-in list keeps 8 too.
-  var SHELF_VISIBLE = 8, FEW_APPS = 8;
+  // Apps shown at once: 6, for bigger tiles (252 × 142) that read from the sofa; the shelf scrolls for the rest. The
+  // built-in list keeps 8.
+  var SHELF_VISIBLE = 6, FEW_APPS = 8, TILE_H = 142;
+
+  // Logos of our own, used instead of the TV's icon where lifting that one leaves the logo the tile's own color
+  // (LG's Spotify icon: a green logo, which came out green on Spotify's green tile).
+  var OWN_LOGO = {spotify: 'icons/spotify.svg'};
 
   function shelfKey(app) {
     for (var i = 0; i < SHELF.length; i++) if (SHELF[i][1].test(app.id) || SHELF[i][2].test(app.title)) return SHELF[i];
@@ -326,6 +330,12 @@
     paint(box, top, bottom);
     var word = el('div', 'word', box, app.title);
     if (wordSize) word.style.fontSize = wordSize + 'px';
+    var own = k && OWN_LOGO[k[0]];
+    if (own) {   // our white logo on the brand's tile, as it is: nothing to lift
+      word.style.visibility = 'hidden';
+      el('img', 'own', box).src = own;
+      return;
+    }
     if (app.icon) {
       var img = el('img', '', box), url = app.icon;
       word.style.visibility = 'hidden';
@@ -401,6 +411,7 @@
     list = $('tiles').children;
     for (i = 0; i < list.length; i++) setClass(list[i], 'focus', st.zone === Z.SHELF && st.shelf === i);
     revealShelf();
+    moveHalo();
     list = document.querySelectorAll('#drawer .key');
     for (i = 0; i < list.length; i++) setClass(list[i], 'focus', st.zone === Z.DRAWER && st.drawer === i);
     list = document.querySelectorAll('#apps .cell');
@@ -568,6 +579,16 @@
     var d = new Date(), c = $('clock');
     c.firstChild.textContent = formatDate('format|h:mm', d.getTime());
     c.lastChild.textContent = formatDate('format|EEEE, MMMM d', d.getTime());
+    renderGreeting(d);
+  }
+
+  /** "Good morning, <name>" above the clock: morning 5–12, afternoon 12–17, evening 17–22, night after. */
+  function renderGreeting(d) {
+    var g = $('greet');
+    if (!g) return;
+    var h = d.getHours(), name = (CONFIG.greetingName || '').trim();
+    var text = h >= 5 && h < 12 ? 'Good morning' : h >= 12 && h < 17 ? 'Good afternoon' : h >= 17 && h < 22 ? 'Good evening' : 'Good night';
+    g.textContent = name ? text + ', ' + name : text;
   }
 
   /** On the minute, so the clock never runs late (the 30-second refresh could, by up to 30 s). */
@@ -582,8 +603,8 @@
 
   function renderShelf() {
     var n = Math.min(shelf.length, SHELF_VISIBLE), gap = 48, pad = 40;
-    // 16:9 tiles, as on Android: never taller than 126, and the glass keeps its bottom edge.
-    var tw = Math.min(126 * 16 / 9, (1760 - Math.max(0, n - 1) * gap) / Math.max(1, n)), th = tw * 9 / 16;
+    // 16:9 tiles: never taller than TILE_H, and the glass keeps its bottom edge.
+    var tw = Math.min(TILE_H * 16 / 9, (1760 - Math.max(0, n - 1) * gap) / Math.max(1, n)), th = tw * 9 / 16;
     var width = n * tw + Math.max(0, n - 1) * gap, left = (1920 - width) / 2;
     var platter = $('platter');
     platter.style.display = n ? '' : 'none';
@@ -631,6 +652,36 @@
     var arrows = $('platter').children;
     arrows[0].style.visibility = shelfFirst > 0 ? '' : 'hidden';
     arrows[1].style.visibility = shelfFirst + n < shelf.length ? '' : 'hidden';
+  }
+
+  /**
+   * The glow behind the focused app: one element that glides from app to app (a transform the GPU animates), instead
+   * of each tile's shadow switching on and off, which the TV repaints and shows as a jump. It sits outside #tiles, so
+   * the shelf's tiles stay the only children there, and follows the row's scroll by position.
+   */
+  var haloShown = false;
+  function moveHalo() {
+    var h = $('halo');
+    if (!h) return;
+    var on = st.zone === Z.SHELF && shelf.length > 0 && tileStep > 0;
+    setClass(h, 'on', on);
+    if (!on) { haloShown = false; return; }
+    var tile = $('tiles').children[st.shelf];
+    if (!tile) return;
+    h.style.left = tileLeft + 'px';
+    h.style.top = tile.style.top;
+    h.style.width = tile.style.width;
+    h.style.height = tile.style.height;
+    var t = 'translate(' + ((st.shelf - shelfFirst) * tileStep) + 'px, -16px) scale(1.34)';
+    if (!haloShown) {   // appearing: at its place at once, then fading in, not flying in from the last one
+      h.style.webkitTransition = h.style.transition = 'none';
+      h.style.webkitTransform = h.style.transform = t;
+      void h.offsetWidth;
+      h.style.webkitTransition = h.style.transition = '';
+      haloShown = true;
+      return;
+    }
+    h.style.webkitTransform = h.style.transform = t;
   }
 
   /** Scrolls the shelf, one app at a time, so the focused app is shown. */
@@ -858,8 +909,8 @@
         step: function (d) { cycle('theme', ['auto', 'light', 'dark'], theme, d); checkNight(); }},
       {label: tr('Dim'), value: dimName(),
         step: function (d) { cycle('dim', ['off', 'low', 'medium', 'high', 'auto'], Prefs.dim(), d); applyDim(); }},
-      {label: tr('Screensaver'), value: saverMode() === 'clock' ? tr('Clock') : tr('Photos'),
-        step: function (d) { cycle('saver', ['photos', 'clock'], saverMode(), d); }},
+      {label: tr('Screensaver'), value: saverMode() === 'clock' ? tr('Clock') : saverMode() === 'photos' ? tr('Photos') : tr('Off'),
+        step: function (d) { cycle('saver', ['off', 'photos', 'clock'], saverMode(), d); }},
       {label: tr('Picks per tab'), value: String(Prefs.cards()),
         step: function (d) { Prefs.set('cards', 3 + (Prefs.cards() - 3 + (d || 1) + 4) % 4); renderCards(); }},
       {label: tr('Cartoons and anime'), toggle: !Prefs.hideAnimation(),
@@ -1566,7 +1617,204 @@
 
   var lastNight = null;
 
+  // MARK: - Weather scene: a calm, simple picture of the weather now at the location (Open-Meteo's WMO code), by day
+  // or by night (is_day), whatever the theme: the sky's colour, and only what that weather has in it: sun, moon and
+  // stars, clouds, rain, snow, fog or lightning. Everything is drawn once on small canvases and then only slides or
+  // fades (transform and opacity), slowly, so it stays smooth on the TV and restful to look at.
+
+  /** The scene for a WMO weather code: clear, partly, cloudy, fog, rain, snow or storm ('' without one). */
+  function wxKind(code) {
+    if (code === undefined || code === null || isNaN(code)) return '';
+    if (code <= 1) return 'clear';
+    if (code === 2) return 'partly';
+    if (code === 3) return 'cloudy';
+    if (code === 45 || code === 48) return 'fog';
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
+    if (code >= 95) return 'storm';
+    if (code >= 51) return 'rain';
+    return 'cloudy';
+  }
+
+  /** Light (drizzle, light rain or snow), heavy (downpour, heavy snow) or '' (moderate), from the WMO code. */
+  function wxLevel(code) {
+    if ([65, 67, 82, 75, 86].indexOf(code) >= 0) return 'heavy';
+    if ([51, 53, 55, 56, 57, 61, 66, 80, 71, 77, 85].indexOf(code) >= 0) return 'light';
+    return '';
+  }
+
+  /** A seeded random generator, so every TV draws the same sky. */
+  function wxRandom(seed) {
+    var s = seed;
+    return function () { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  }
+
+  /** A soft, seamless fog band, 1920 × 520: planned at half size, drawn at full HD. */
+  function wxFogBand(seed) {
+    var W = 960, H = 260, c = document.createElement('canvas'), x = c.getContext('2d'), rnd = wxRandom(seed);
+    c.width = W * 2; c.height = H * 2;
+    x.scale(2, 2);
+    for (var i = 0; i < 18; i++) {
+      var px = rnd() * W, py = H * (0.35 + rnd() * 0.3), rx = 120 + rnd() * 160;
+      for (var dx = -W; dx <= W; dx += W) {
+        x.save(); x.translate(px + dx, py); x.scale(1, 0.32);
+        var g = x.createRadialGradient(0, 0, 0, 0, 0, rx);
+        g.addColorStop(0, 'rgba(255,255,255,0.5)');
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        x.fillStyle = g; x.beginPath(); x.arc(0, 0, rx, 0, Math.PI * 2); x.fill();
+        x.restore();
+      }
+    }
+    return 'url(' + c.toDataURL() + ')';
+  }
+
+  /** A 512 × 512 seamless tile of rain (thin, soft streaks) or snow (soft round flakes). */
+  function wxTile(kind, seed) {
+    var c = document.createElement('canvas'), x = c.getContext('2d'), rnd = wxRandom(seed);
+    c.width = c.height = 512;
+    var dx, dy;
+    if (kind === 'rain') {
+      x.lineCap = 'round';
+      for (var i = 0; i < 46; i++) {
+        var px = rnd() * 512, py = rnd() * 512, len = 30 + rnd() * 26;
+        x.strokeStyle = 'rgba(220, 232, 250, ' + (0.35 + rnd() * 0.35).toFixed(2) + ')';
+        x.lineWidth = 1.2 + rnd();
+        for (dx = -512; dx <= 512; dx += 512) for (dy = -512; dy <= 512; dy += 512) {
+          x.beginPath(); x.moveTo(px + dx, py + dy); x.lineTo(px + dx - len * 0.1, py + dy + len); x.stroke();
+        }
+      }
+    } else {
+      for (var j = 0; j < 60; j++) {
+        var sx = rnd() * 512, sy = rnd() * 512, r = 2 + rnd() * 4.5, a = 0.55 + rnd() * 0.4;
+        for (dx = -512; dx <= 512; dx += 512) for (dy = -512; dy <= 512; dy += 512) {
+          var f = x.createRadialGradient(sx + dx, sy + dy, 0, sx + dx, sy + dy, r);
+          f.addColorStop(0, 'rgba(255,255,255,' + a.toFixed(2) + ')');
+          f.addColorStop(1, 'rgba(255,255,255,0)');
+          x.fillStyle = f; x.beginPath(); x.arc(sx + dx, sy + dy, r, 0, Math.PI * 2); x.fill();
+        }
+      }
+    }
+    return 'url(' + c.toDataURL() + ')';
+  }
+
+  /** Fine grain: breaks the bands a smooth gradient shows on a big screen. */
+  function wxGrain() {
+    var c = document.createElement('canvas'), x = c.getContext('2d'), N = 192, rnd = wxRandom(77);
+    c.width = c.height = N;
+    var img = x.createImageData(N, N), d = img.data;
+    for (var i = 0; i < N * N; i++) {
+      var v = rnd();
+      d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v > 0.5 ? 255 : 0;
+      d[i * 4 + 3] = Math.round(Math.abs(v - 0.5) * 2 * 10);
+    }
+    x.putImageData(img, 0, 0);
+    return 'url(' + c.toDataURL() + ')';
+  }
+
+  /** Stars as one element's box-shadows: crisp points of light, a few brighter, more toward the top. */
+  function wxStars(n, seed, big) {
+    var rnd = wxRandom(seed), out = [];
+    for (var i = 0; i < n; i++) {
+      var y = Math.pow(rnd(), 1.6) * 760, a = (0.35 + rnd() * 0.65).toFixed(2);
+      out.push(Math.round(rnd() * 1920) + 'px ' + Math.round(y) + 'px 0 ' + (big && rnd() < 0.5 ? '1px' : '0') +
+        ' rgba(255, 255, 255, ' + a + ')');
+    }
+    return out.join(', ');
+  }
+
+  var wxKey = null, wxStatic = false;
+
+  /** The parts every scene shares, drawn once: rain, snow, fog, grain and the stars. */
+  function buildWx() {
+    if (wxStatic) return;
+    wxStatic = true;
+    var box = $('wx');
+    try {
+      box.querySelector('.p1').style.backgroundImage = wxTile('rain', 7);
+      box.querySelector('.p2').style.backgroundImage = wxTile('rain', 31);
+      box.querySelector('.s1f').style.backgroundImage = wxTile('snow', 11);
+      box.querySelector('.s2f').style.backgroundImage = wxTile('snow', 53);
+      box.querySelector('.f1').style.backgroundImage = wxFogBand(5);
+      box.querySelector('.f2').style.backgroundImage = wxFogBand(29);
+      box.querySelector('.grain').style.backgroundImage = wxGrain();
+    } catch (e) {}   // no canvas: the sky's colour still shows
+    box.querySelector('.st1').style.boxShadow = wxStars(150, 3, false);
+    box.querySelector('.st2').style.boxShadow = wxStars(70, 19, true);
+    box.querySelector('.st3').style.boxShadow = wxStars(40, 41, true);
+  }
+
+  /**
+   * The photo for each weather, by day and by night (web/skies, from Pexels), and a filter where one photo serves two
+   * weathers: the grey day darkened for rain, brightened for snow; the storm and fog darkened at night.
+   */
+  var WX_PHOTO = {
+    'clear-day': ['clear-day', ''], 'clear-night': ['clear-night', ''],
+    'partly-day': ['partly-day', ''], 'partly-night': ['moon-night', ''],
+    'cloudy-day': ['overcast', ''], 'cloudy-night': ['cloudy-night', ''],
+    'fog-day': ['fog', ''], 'fog-night': ['fog', 'brightness(0.35) saturate(0.7)'],
+    'rain-day': ['overcast', 'brightness(0.72) saturate(0.85)'], 'rain-night': ['cloudy-night', 'brightness(0.8)'],
+    'snow-day': ['overcast', 'brightness(1.12) saturate(0.7)'], 'snow-night': ['cloudy-night', ''],
+    'storm-day': ['storm', ''], 'storm-night': ['storm', 'brightness(0.45)']
+  };
+  var photoFront = 'pa', photoKey = '';
+
+  /** Crossfades to the scene's photo: the new one fades in over the old, which then fades out. */
+  function setPhoto(kind, day) {
+    var p = WX_PHOTO[kind + (day ? '-day' : '-night')];
+    var key = p ? p.join('|') : '';
+    if (key === photoKey) return;
+    photoKey = key;
+    var box = $('wx'), front = box.querySelector('.' + photoFront), back = box.querySelector('.' + (photoFront === 'pa' ? 'pb' : 'pa'));
+    if (!p) { setClass(front, 'on', false); return; }
+    back.style.backgroundImage = 'url(skies/' + p[0] + '.jpg)';
+    back.style.webkitFilter = back.style.filter = p[1];
+    setClass(back, 'on', true);
+    setClass(front, 'on', false);
+    photoFront = photoFront === 'pa' ? 'pb' : 'pa';
+  }
+
+  /** The sky for the weather now; without weather (or with it turned off), the plain background as before. */
+  function applyWeatherScene() {
+    var w = Prefs.weather() ? Data.weather : null;
+    var kind = w ? wxKind(w.code) : '';
+    var cls = kind ? 'k-' + kind + ' ' + (w.isDay ? 'wx-day' : 'wx-night') : '';
+    if (cls) { var level = wxLevel(w.code); if (level) cls += ' wx-' + level; }
+    if (cls === wxKey) return;
+    wxKey = cls;
+    setClass($('sky'), 'wx-on', !!cls);
+    if (!cls) return;
+    // The rain, snow, fog and grain textures are drawn a moment later, so the first frame (sky and photo) isn't held.
+    if (!wxStatic) setTimeout(buildWx, 400);
+    setPhoto(kind, w.isDay);
+    $('wx').className = cls;
+  }
+
+  var nowKey = null;
+
+  /** The weather now beside the clock: symbol and temperature, the condition, high and low, sunrise and sunset. */
+  function renderNowWeather() {
+    var box = $('nowwx');
+    if (!box) return;
+    var w = Prefs.weather() ? Data.weather : null;
+    var key = w ? [w.code, w.isDay, Data.degrees(w.temp), Data.degrees(w.max), Data.degrees(w.min),
+      w.sunrise, w.sunset, Data.city, Prefs.temperature()].join('|') : '';
+    if (key === nowKey) return;
+    nowKey = key;
+    box.innerHTML = '';
+    setClass(box, 'on', !!w);
+    if (!w) return;
+    var now = el('div', 'now', box);
+    sym(Data.symbol(w.code, w.isDay), now);
+    el('span', 'temp', now, Data.degrees(w.temp));
+    el('div', 'cond', box, Data.condition(w.code, w.isDay) + (Data.city ? ' · ' + Data.city : ''));
+    el('div', 'range', box, trf('H:{max}', {max: Data.degrees(w.max)}) + '   ' + trf('L:{min}', {min: Data.degrees(w.min)}));
+    var sun = el('div', 'sun', box);
+    if (w.sunrise) { var a = el('span', '', sun); sym('sunrise', a); a.appendChild(document.createTextNode(Data.time(w.sunrise))); }
+    if (w.sunset) { var b = el('span', '', sun); sym('sunset', b); b.appendChild(document.createTextNode(Data.time(w.sunset))); }
+  }
+
   function checkNight() {
+    applyWeatherScene();
+    renderNowWeather();
     var night = Data.isNight(Date.now());
     setClass(body, 'night', night);
     if (night === lastNight) return;
@@ -1759,16 +2007,53 @@
     return false;
   }
 
-  function loadApps(done) {
+  // The TV's apps and inputs from last time, so the shelf shows at once when the app starts (LG lists them to Developer
+  // Mode apps only through the remote control API and our service, which takes seconds to start); the TV's own list
+  // follows and replaces it if anything changed.
+  var APPS_CACHE = 'fmtv.appsCache', appsKey = '', appsCacheTried = false;
+
+  function useApps(list, list2) {
+    apps = list.filter(function (a) { return !hidden(a); });
+    Data.setApps(apps);
+    pickShelf();
+    inputs = list2;
+  }
+
+  /** The TV's own lists; changed(true) when they differ from what's shown. */
+  function fetchApps(changed) {
     TV.apps(function (list) {
-      apps = list.filter(function (a) { return !hidden(a); });
-      Data.setApps(apps);
-      pickShelf();
       TV.inputs(function (list2) {
-        inputs = list2;
-        if (done) done();
+        var key = JSON.stringify([list, list2]);
+        var differs = key !== appsKey;
+        appsKey = key;
+        if (differs) {
+          useApps(list, list2);
+          try { localStorage.setItem(APPS_CACHE, key); } catch (e) {}
+        }
+        changed(differs);
       });
     });
+  }
+
+  function loadApps(done) {
+    if (!appsCacheTried) {
+      appsCacheTried = true;
+      var cached = null;
+      try { cached = JSON.parse(localStorage.getItem(APPS_CACHE) || 'null'); } catch (e) {}
+      if (cached && cached[0] && cached[0].length) {
+        appsKey = JSON.stringify(cached);
+        useApps(cached[0], cached[1] || []);
+        if (done) done();
+        fetchApps(function (differs) {
+          if (!differs) return;
+          renderShelf();
+          renderDrawer();
+          updateFocus();
+        });
+        return;
+      }
+    }
+    fetchApps(function () { if (done) done(); });
   }
 
   /** Back to the home screen (the app was opened again): the shelf, everything closed, the first tab at its first pick. */
@@ -1818,7 +2103,8 @@
   I18N.set(Prefs.language());
   checkNight();   // now, from the last forecast: not after the TV lists its apps, with the day look until then
   // LG's screensaver waits only when ours will show: not under a sheet (ours waits there), and not without photos.
-  TV.holdScreenSaver(function () { return !sheetOpen() && (saverMode() === 'clock' || saverPhotos().length > 0); });
+  // Off: never held, so the TV's own screensaver comes on at its usual time.
+  TV.holdScreenSaver(function () { return saverMode() !== 'off' && !sheetOpen() && (saverMode() === 'clock' || saverPhotos().length > 0); });
   fit();
   renderTop();
   applyDim();
@@ -1832,7 +2118,7 @@
     checkNight();
     Data.refresh();
     applyDim();   // automatic: medium from 22:00, off again at 07:00
-    if (!saverOn && !ambientOn && !sheetOpen() && Date.now() - idleAt > SAVER_AFTER) {
+    if (saverMode() !== 'off' && !saverOn && !ambientOn && !sheetOpen() && Date.now() - idleAt > SAVER_AFTER) {
       if (saverMode() === 'clock') showAmbient(); else showSaver();
     }
     if (saverOn) tickSaverClock($('saver').querySelector('.clock'));

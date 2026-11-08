@@ -1,3 +1,11 @@
+> **This fork (free-my-tv-lg)** adds, for LG webOS TVs:
+> - **A live weather sky:** a photo of the sky for the weather now, day and night (clear, partly cloudy, cloudy, rain, snow, fog, storm), gliding slowly, with rain, snow, fog, twinkling stars, shooting stars and lightning animated on top ([`web/skies`](web/skies/CREDITS.txt), Pexels).
+> - **The weather beside the clock:** temperature, condition, high and low, sunrise and sunset, from DWD's ICON model (closer to phone weather apps in Central Europe than Open-Meteo's default).
+> - **A greeting** above the clock ("Good morning, …"; `greeting_name` in `config.properties`).
+> - **A calmer, bolder look:** bigger shelf tiles (six at a time), a highlight that glides between apps, bolder type, and Free My TV's own screensaver off by default (Home Settings can turn it back on), so the TV's own comes on as usual.
+> - **Opens when the TV turns on:** LG keeps that from Developer Mode apps, so [`tools/autostart.py`](tools/autostart.py) runs on a computer on the same Wi-Fi and opens Free My TV when LG's home comes up (asks on the TV once to allow it). [`webos/renew-weekly.cmd`](webos/renew-weekly.cmd) renews Developer Mode from Windows' Task Scheduler.
+> - **A faster start:** the shelf shows the apps from last time at once, while the TV lists them.
+
 <div align="center">
 
 <img src="docs/assets/icon-512.png" width="96" alt="">
